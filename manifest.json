@@ -2,13 +2,11 @@
   "manifest_version": 3,
   "name": "LeetCode Fire",
   "version": "1.0",
-  "description": "Makes LeetCode activity squares glow with fire.",
+  "description": "Green fiery animation for solved LeetCode heatmap squares, spreading left→right.",
+  "permissions": ["storage"],
   "content_scripts": [
     {
-      "matches": [
-        "https://leetcode.com/*",
-        "https://www.leetcode.com/*"
-      ],
+      "matches": ["https://leetcode.com/*"],
       "js": ["content.js"],
       "css": ["styles.css"]
     }
