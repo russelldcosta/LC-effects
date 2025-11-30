@@ -1,12 +1,12 @@
 /* Configuration */
-const SPREAD_STEP_MS = 90;
-const HOLD_AFTER_RUN_MS = 900;
+const SPREAD_STEP_MS = 120;
+const HOLD_AFTER_RUN_MS = 3000;
 const FLARE_PROBABILITY = 0.10;
 const RANDOM_INTERVAL_MIN = 300;
 const RANDOM_INTERVAL_MAX = 900;
 
 /* New Config for Random Bursts */
-const RANDOM_BATCH_SIZE = 4;    // How many squares light up at once
+const RANDOM_BATCH_SIZE = 10;    // How many squares light up at once
 const BATCH_DELAY_MS = 250;     // Delay between the first group and second group
 
 const GREEN_SELECTOR = 'rect[fill^="var(--green"]';
