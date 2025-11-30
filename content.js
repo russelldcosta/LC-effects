@@ -1,92 +1,200 @@
-// Spread configuration (tweak these numbers)
-const SPREAD_STEP_MS = 90;    // time between each square lighting (spread speed)
-const HOLD_AFTER_RUN_MS = 1100; // how long to hold after full spread before resetting
-const FLARE_PROBABILITY = 0.12; // chance a square will briefly flare during spread
+/* Configuration */
+const SPREAD_STEP_MS = 90;
+const HOLD_AFTER_RUN_MS = 900;
+const FLARE_PROBABILITY = 0.10;
+const RANDOM_INTERVAL_MIN = 300;
+const RANDOM_INTERVAL_MAX = 900;
 
-// selector for LeetCode solved-day rects (matches current UI)
 const GREEN_SELECTOR = 'rect[fill^="var(--green"]';
 
-// helper: get all green rects in visual (left→right) order
-function getSortedGreenRects() {
+let currentMode = "sweep";
+let FIRE_MODE = "sweep";
+
+/* Remove all glow from all squares */
+function resetAllGlow() {
+    getFlatRects().forEach(r => removeGlow(r));
+}
+
+/* Load mode from storage */
+function loadMode() {
+    chrome.storage.sync.get("fireMode", data => {
+        currentMode = data.fireMode || "sweep";
+        FIRE_MODE = currentMode;
+
+        stopSweepLoop();
+        stopRandomLoop();
+        resetAllGlow();   // <<<<< THE FIX
+        scheduleRun(120);
+    });
+}
+
+chrome.storage.onChanged.addListener(loadMode);
+loadMode();
+
+/* Helpers: group into columns */
+function getColumns() {
   const list = Array.from(document.querySelectorAll(GREEN_SELECTOR));
-  // filter visible ones and map to bounding rect for ordering
   const visible = list.filter(r => {
     const bb = r.getBoundingClientRect();
     return bb.width > 0 && bb.height > 0;
   });
-  visible.sort((a,b) => {
-    const A = a.getBoundingClientRect();
-    const B = b.getBoundingClientRect();
-    // primary sort: by y (top), secondary: by x (left) — to respect grid rows
-    if (Math.abs(A.top - B.top) > 6) return A.top - B.top;
-    return A.left - B.left;
+
+  const columns = {};
+  visible.forEach(r => {
+    const bb = r.getBoundingClientRect();
+    const key = Math.round(bb.left);
+    if (!columns[key]) columns[key] = [];
+    columns[key].push(r);
   });
-  return visible;
+
+  const sorted = Object.keys(columns).map(Number).sort((a,b)=>a-b);
+  return sorted.map(k => columns[k].sort((a,b)=> a.getBoundingClientRect().top - b.getBoundingClientRect().top));
 }
 
-// add classes in a staggered manner left -> right
-let cycleTimer = null;
-let running = false;
-
-function runSpreadCycle() {
-  if (running) return;
-  running = true;
-
-  const rects = getSortedGreenRects();
-  if (!rects.length) {
-    running = false;
-    return;
-  }
-
-  // ensure previous classes removed
-  rects.forEach(r => r.classList.remove('fire-glow', 'flame-anim', 'flare'));
-
-  rects.forEach((rect, i) => {
-    const delay = i * SPREAD_STEP_MS;
-    setTimeout(() => {
-      // apply main glow + flame animation
-      rect.classList.add('fire-glow', 'flame-anim');
-
-      // small chance to trigger a brighter flare on this square
-      if (Math.random() < FLARE_PROBABILITY) {
-        rect.classList.add('flare');
-        // remove flare after its animation completes
-        setTimeout(() => rect.classList.remove('flare'), 500);
-      }
-
-      // last one => schedule reset after a hold
-      if (i === rects.length - 1) {
-        setTimeout(() => {
-          rects.forEach(r => r.classList.remove('fire-glow', 'flame-anim', 'flare'));
-          // schedule next cycle
-          setTimeout(() => {
-            running = false;
-            runSpreadCycle();
-          }, 300);
-        }, HOLD_AFTER_RUN_MS);
-      }
-    }, delay);
-  });
+function getFlatRects() {
+  return getColumns().flat();
 }
 
-// observe DOM changes and restart cycle when calendar updates
+/* Glow effect */
+function addGlow(el) {
+    el.classList.add("fire-bright", "flame-anim");
+}
+function removeGlow(el) {
+    el.classList.remove("fire-bright", "flame-anim", "flare", "fire-fade");
+}
+function fadeGlow(el) {
+    removeGlow(el);
+    el.classList.add("fire-fade");
+    setTimeout(() => el.classList.remove("fire-fade"), 700);
+}
+
+/* Debounced runner */
+let runTimeout = null;
+function scheduleRun(ms=250) {
+    clearTimeout(runTimeout);
+    runTimeout = setTimeout(() => runSpreadCycle(), ms);
+}
+
+/* Observer */
 const observer = new MutationObserver(() => {
-  // if not running, start a new cycle; else let current run finish
-  if (!running) {
-    // short debounce so UI finishes rendering
-    clearTimeout(cycleTimer);
-    cycleTimer = setTimeout(() => {
-      runSpreadCycle();
-    }, 300);
-  }
+  if (!sweepRunning && !randomRunning) scheduleRun(200);
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-// initial attempt (in case heatmap is already there)
-window.addEventListener('load', () => {
-  // Wait a little for React to render heatmap
-  setTimeout(runSpreadCycle, 700);
-});
+/* -------- SWEEP MODE -------- */
+let sweepRunning = false;
+let sweepTimers = [];
 
-// Also attempt immediately in case load already fired
-setTimeout(runSpreadCycle, 500);
+function clearSweepTimers() {
+    sweepTimers.forEach(t => clearTimeout(t));
+    sweepTimers = [];
+}
+
+function stopSweepLoop() {
+    clearSweepTimers();
+    sweepRunning = false;
+}
+
+function runSweepOnce() {
+    const flat = getFlatRects();
+    if (!flat.length) {
+        sweepRunning = false;
+        return;
+    }
+
+    flat.forEach(r => removeGlow(r));
+
+    flat.forEach((rect, i) => {
+        const onDelay = i * SPREAD_STEP_MS;
+
+        const onTimer = setTimeout(() => {
+            addGlow(rect);
+
+            if (Math.random() < FLARE_PROBABILITY) {
+                rect.classList.add("flare");
+                setTimeout(() => rect.classList.remove("flare"), 420);
+            }
+
+            const fadeTimer = setTimeout(() => {
+                fadeGlow(rect);
+                if (i === flat.length - 1) {
+                    sweepRunning = false;
+                    scheduleRun(120);
+                }
+            }, HOLD_AFTER_RUN_MS);
+
+            sweepTimers.push(fadeTimer);
+        }, onDelay);
+
+        sweepTimers.push(onTimer);
+    });
+}
+
+function runSpreadCycle() {
+    stopRandomLoop();
+    if (FIRE_MODE !== "sweep") return;
+
+    if (sweepRunning) return;
+    sweepRunning = true;
+    runSweepOnce();
+}
+
+/* -------- RANDOM MODE -------- */
+let randomRunning = false;
+let randomTimer = null;
+
+function stopRandomLoop() {
+    if (randomTimer) clearTimeout(randomTimer);
+    randomRunning = false;
+}
+
+function scheduleNextRandom(rects) {
+    const delay = Math.random() * (RANDOM_INTERVAL_MAX - RANDOM_INTERVAL_MIN) + RANDOM_INTERVAL_MIN;
+    randomTimer = setTimeout(() => runRandomOnce(rects), delay);
+}
+
+function runRandomOnce(allRects) {
+    if (FIRE_MODE !== "random") {
+        stopRandomLoop();
+        return;
+    }
+
+    if (!allRects || !allRects.length) {
+        scheduleNextRandom(getFlatRects());
+        return;
+    }
+
+    const rect = allRects[Math.floor(Math.random() * allRects.length)];
+    if (!rect) {
+        scheduleNextRandom(allRects);
+        return;
+    }
+
+    addGlow(rect);
+
+    if (Math.random() < FLARE_PROBABILITY) {
+        rect.classList.add("flare");
+        setTimeout(() => rect.classList.remove("flare"), 420);
+    }
+
+    setTimeout(() => {
+        fadeGlow(rect);
+        scheduleNextRandom(allRects);
+    }, 500 + Math.random() * 400);
+}
+
+function runRandomMode() {
+    stopSweepLoop();
+    if (randomRunning) return;
+    randomRunning = true;
+    scheduleNextRandom(getFlatRects());
+}
+
+/* -------- MAIN -------- */
+function runModeController() {
+    if (FIRE_MODE === "sweep") runSpreadCycle();
+    else runRandomMode();
+}
+
+window.addEventListener("load", () => setTimeout(runModeController, 700));
+setTimeout(runModeController, 700);

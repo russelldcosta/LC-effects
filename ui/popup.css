@@ -1,0 +1,19 @@
+body {
+    width: 210px;
+    padding: 15px;
+    font-family: Arial, sans-serif;
+}
+
+h2 {
+    font-size: 16px;
+    margin-bottom: 14px;
+}
+
+.option {
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+input[type="radio"] {
+    margin-right: 6px;
+}

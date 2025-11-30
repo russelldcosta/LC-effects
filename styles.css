@@ -1,55 +1,45 @@
-/* Core green fire glow for SVG rects */
 .fire-glow {
-  /* change the rect fill to a bright green (override LeetCode) */
-  fill: #00ff95 !important;
-
-  /* multi-layer outer glow; GPU accelerated */
-  filter:
-    drop-shadow(0 0 6px rgba(50,255,114,0.9))
-    drop-shadow(0 0 14px rgba(0,255,150,0.55))
-    drop-shadow(0 0 28px rgba(0,200,100,0.25)) !important;
-
-  /* tiny transform so GPU can composite smoothly */
-  transform-box: fill-box;
-  transform-origin: center;
+    filter: drop-shadow(0 0 6px #00ff66) drop-shadow(0 0 12px #00ff66);
 }
 
-/* subtle pulse + flicker to feel like fire */
-.fire-glow.flame-anim {
-  animation:
-    flamePulse 900ms ease-in-out infinite,
-    flameFlicker 220ms steps(2, end) infinite;
+.fire-glow-fade {
+    transition: filter 0.6s ease-out;
+    filter: drop-shadow(0 0 1px #00ff66) drop-shadow(0 0 2px #00ff66);
 }
 
-/* slightly larger flare event (applied briefly by JS) */
-.fire-glow.flare {
-  animation: flareBurst 320ms ease-out forwards;
-  filter:
-    drop-shadow(0 0 18px rgba(186,255,218,0.95))
-    drop-shadow(0 0 36px rgba(140,255,190,0.6));
+.flame-anim {
+    animation: flamePulse 0.42s infinite alternate;
 }
 
-/* pulse of core color / brightness */
 @keyframes flamePulse {
-  0%   { fill: #00c973 !important; transform: translateY(0) scale(1); }
-  40%  { fill: #00ff95 !important; transform: translateY(-0.6px) scale(1.02); }
-  100% { fill: #00d88a !important; transform: translateY(0) scale(1); }
+    from { filter: drop-shadow(0 0 5px #00ff66); }
+    to   { filter: drop-shadow(0 0 13px #22ff88); }
 }
 
-/* quick high-frequency flicker to simulate chaotic flames */
-@keyframes flameFlicker {
-  0%   { opacity: 1; }
-  25%  { opacity: 0.88; transform: translateY(-0.4px); }
-  50%  { opacity: 0.95; transform: translateY(0.3px); }
-  75%  { opacity: 0.87; transform: translateY(-0.2px); }
-  100% { opacity: 1; transform: translateY(0); }
+.flare {
+    animation: flareFlash 0.25s infinite alternate;
 }
 
-/* one-off flare burst for occasional bright pops */
-@keyframes flareBurst {
-  0%   { fill: #baffda !important; filter: drop-shadow(0 0 30px rgba(186,255,218,1)); opacity: 1; transform: scale(1.1); }
-  100% { fill: #00ff95 !important; filter: drop-shadow(0 0 8px rgba(50,255,114,0.9)); opacity: 0.95; transform: scale(1); }
+@keyframes flareFlash {
+    from { filter: drop-shadow(0 0 12px #55ff99); }
+    to   { filter: drop-shadow(0 0 18px #99ffcc); }
 }
 
-/* When we remove class, ensure default style returns */
-rect.fire-glow { transition: filter 300ms ease, fill 300ms ease, transform 300ms ease, opacity 220ms ease; }
+
+/* FULL-BRIGHT IGNITE GLOW */
+rect.fire-bright {
+    fill: #a8ffa8 !important;              /* bright green inside */
+    filter: brightness(10) saturate(1.4);
+    transition: fill 0.15s linear, filter 0.15s linear;
+    box-shadow: 0 0 14px 8px rgba(187, 246, 187, 0.75);
+}
+
+rect.fire-fade {
+    transition: filter 0.4s ease-out, fill 0.4s ease-out;
+    filter: brightness(1.0) saturate(1.0);
+    box-shadow: 0 0 0px 0px rgba(0,255,0,0);
+}
+
+rect.flare {
+    box-shadow: 0 0 26px 14px rgba(120,255,120,0.95) !important;
+}
