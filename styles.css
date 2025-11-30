@@ -1,0 +1,28 @@
+.fire-glow {
+    animation: firePulse 1.6s ease-in-out infinite !important;
+    filter: drop-shadow(0 0 4px #ff7500) !important;
+}
+
+@keyframes firePulse {
+    0% {
+        fill: #ffae00 !important;
+        filter: drop-shadow(0 0 4px #ff5e00) !important;
+    }
+    50% {
+        fill: #ffd400 !important;
+        filter: drop-shadow(0 0 12px #ff3000) !important;
+    }
+    100% {
+        fill: #ffae00 !important;
+        filter: drop-shadow(0 0 4px #ff5e00) !important;
+    }
+}
+
+.flicker {
+    animation: flickerAnim 0.15s infinite alternate !important;
+}
+
+@keyframes flickerAnim {
+    0% { opacity: 1; }
+    100% { opacity: 0.82; }
+}

@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "LeetCode Fire",
+  "version": "1.0",
+  "description": "Makes LeetCode activity squares glow with fire.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/*",
+        "https://www.leetcode.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ]
+}
